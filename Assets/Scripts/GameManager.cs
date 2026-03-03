@@ -5,20 +5,11 @@ using Random = UnityEngine.Random;
 
 public class GameManager : MonoBehaviour
 {
-    private int _currentFloor = 0;
+    public int currentFloor;
     
     public static GameManager Instance;
     public TextMeshProUGUI FloorText;
     
-    [Header("Base Weights (Floor 0)")]
-    public float baseBoonWeight = 30f;
-    public float baseMalusWeight = 20f;
-    public float baseNothingWeight = 50f;
-    [Header("Boon Types")]
-    public WeightedBoon[] boonTypes;
-    [Header("Malus Types")]
-    public WeightedMalus[] malusTypes;
-
     private void Awake() => Instance = this;
     private void Start() => ShuffleDoors();
 
@@ -27,61 +18,15 @@ public class GameManager : MonoBehaviour
         Door[] doors = FindObjectsByType<Door>(FindObjectsSortMode.None);
         foreach (var door in doors)
         {
-            door.outcome = GetWeightedOutcome();
+            door.outcome = OddsCalculator.Instance.GetWeightedOutcome();
         }
-    }
-    
-    private DoorOutcome GetWeightedOutcome()
-    {
-        // As floor increases: boons get rarer, malus gets more common
-        float boon = Mathf.Max(5f,  baseBoonWeight - _currentFloor * 2f);
-        float malus = baseMalusWeight + _currentFloor * 3f;
-        float nothing = baseNothingWeight;
-
-        float total = boon + malus + nothing;
-        float roll = Random.Range(0f, total);
-
-        if (roll < boon) return DoorOutcome.Boon;
-        if (roll < boon + malus) return DoorOutcome.Malus;
-        return DoorOutcome.Nothing;
-    }
-    
-    // --- Sub-types ---
-    public BoonType GetRandomBoon()
-    {
-        float total = 0f;
-        foreach (var b in boonTypes) total += b.weight;
-
-        float roll = Random.Range(0f, total);
-        float cumulative = 0f;
-        foreach (var b in boonTypes)
-        {
-            cumulative += b.weight;
-            if (roll < cumulative) return b.boon;
-        }
-        return boonTypes[0].boon;
-    }
-
-    public MalusType GetRandomMalus()
-    {
-        float total = 0f;
-        foreach (var m in malusTypes) total += m.weight;
-
-        float roll = Random.Range(0f, total);
-        float cumulative = 0f;
-        foreach (var m in malusTypes)
-        {
-            cumulative += m.weight;
-            if (roll < cumulative) return m.malus;
-        }
-        return malusTypes[0].malus;
     }
 
     private void AdvanceFloor()
     {
-        _currentFloor++;
+        currentFloor++;
         ShuffleDoors();
-        FloorText.text = $"Floor {_currentFloor}";
+        FloorText.text = $"Floor {currentFloor}";
     }
 
     public void RevealDoor(Door door)
@@ -89,11 +34,11 @@ public class GameManager : MonoBehaviour
         switch (door.outcome)
         {
             case DoorOutcome.Boon:
-                BoonType boon = Instance.GetRandomBoon();
+                BoonType boon = OddsCalculator.Instance.GetRandomBoon();
                 Debug.Log($"Boon: {boon}");
                 break;
             case DoorOutcome.Malus:
-                MalusType malus = Instance.GetRandomMalus();
+                MalusType malus = OddsCalculator.Instance.GetRandomMalus();
                 Debug.Log($"Malus: {malus}");
                 break;
             case DoorOutcome.Nothing:
